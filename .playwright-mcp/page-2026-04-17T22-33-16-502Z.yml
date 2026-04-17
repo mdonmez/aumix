@@ -1,0 +1,22 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - heading "aumix" [level=3] [ref=e6]
+      - button [disabled]:
+        - img
+      - button [ref=e8]:
+        - img
+      - slider [ref=e12]
+    - button "Toggle theme" [ref=e13]:
+      - img
+      - img
+      - generic [ref=e14]: Toggle theme
+  - region "Audio drop zone" [ref=e16]:
+    - button "Choose File" [ref=e17]
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - img
+        - generic [ref=e21]: Add new audio
+        - generic [ref=e22]: Drag and drop the audio file or click the button below to select it.
+      - button "Add audio" [ref=e24]
