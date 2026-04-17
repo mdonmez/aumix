@@ -61,7 +61,7 @@
 </script>
 
 <div
-	class="flex w-full max-w-sm items-center justify-center"
+	class="flex w-full items-center justify-center"
 	role="region"
 	aria-label="Audio drop zone"
 	ondrop={handleDrop}

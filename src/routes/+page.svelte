@@ -67,7 +67,7 @@
 		</Button>
 	</header>
 
-	<div class="flex flex-wrap gap-3 p-6">
+	<div class="grid grid-cols-[repeat(auto-fill,minmax(370px,1fr))] gap-4 p-6">
 		{#each audioStore.tracks as track (track.id)}
 			<TrackCard {track} />
 		{/each}

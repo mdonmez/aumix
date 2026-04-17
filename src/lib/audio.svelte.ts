@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { Howl } from 'howler';
 
 export interface TrackState {
 	id: string;
@@ -12,9 +13,11 @@ export interface TrackState {
 	duration: number;
 }
 
-interface AudioObjects {
-	audio: HTMLAudioElement;
+interface HowlRecord {
+	howl: Howl;
 	url: string;
+	/** Howler sound instance ID returned by howl.play(). Null before first play or after a non-looping sound ends. */
+	soundId: number | null;
 }
 
 class AudioStore {
@@ -24,47 +27,64 @@ class AudioStore {
 	masterPlaying = $derived(this.tracks.some((t) => t.playing));
 
 	#masterVolumeBeforeMute = 75;
-	#audioObjects = new Map<string, AudioObjects>();
+	#howls = new Map<string, HowlRecord>();
 	#rafId: number | null = null;
 
-	#syncAudioVolume(track: TrackState, audio: HTMLAudioElement): void {
-		const effectiveVolume =
-			track.muted || this.masterMuted ? 0 : (track.volume / 100) * (this.masterVolume / 100);
+	// ─── Volume helpers ───────────────────────────────────────────────────────
 
-		audio.volume = effectiveVolume;
-		audio.muted = effectiveVolume === 0;
+	#effectiveVolume(track: TrackState): number {
+		return track.muted || this.masterMuted ? 0 : (track.volume / 100) * (this.masterVolume / 100);
 	}
 
-	#syncTrackAudio(id: string): void {
+	/**
+	 * Pushes the correct volume + mute state from TrackState/masterVolume into
+	 * the underlying Howl (and its active sound instance if one exists).
+	 */
+	#applyVolume(id: string): void {
 		const track = this.tracks.find((t) => t.id === id);
-		const objs = this.#audioObjects.get(id);
-		if (!track || !objs) return;
+		const rec = this.#howls.get(id);
+		if (!track || !rec) return;
 
-		this.#syncAudioVolume(track, objs.audio);
-		objs.audio.loop = track.loop;
-	}
+		const vol = this.#effectiveVolume(track);
+		const isMuted = vol === 0;
 
-	#syncAllTrackAudio(): void {
-		for (const track of this.tracks) {
-			const objs = this.#audioObjects.get(track.id);
-			if (objs) {
-				this.#syncAudioVolume(track, objs.audio);
-				objs.audio.loop = track.loop;
-			}
+		if (rec.soundId !== null) {
+			rec.howl.volume(vol, rec.soundId);
+			rec.howl.mute(isMuted, rec.soundId);
+		} else {
+			// No active instance yet – set the Howl-level default so the
+			// next play() inherits the right volume.
+			rec.howl.volume(vol);
 		}
 	}
 
+	#applyVolumeAll(): void {
+		for (const track of this.tracks) {
+			this.#applyVolume(track.id);
+		}
+	}
+
+	// ─── RAF tick (currentTime polling) ──────────────────────────────────────
+
 	#startRaf(): void {
 		if (this.#rafId !== null) return;
+
 		const tick = () => {
 			for (const track of this.tracks) {
-				const objs = this.#audioObjects.get(track.id);
-				if (objs && track.playing) {
-					track.currentTime = objs.audio.currentTime;
+				if (!track.playing) continue;
+				const rec = this.#howls.get(track.id);
+				if (!rec || rec.soundId === null) continue;
+
+				const pos = rec.howl.seek(rec.soundId);
+				// seek() returns Howl | number depending on usage;
+				// the single-number-ID form returns the position as a number.
+				if (typeof pos === 'number' && isFinite(pos)) {
+					track.currentTime = pos;
 				}
 			}
 			this.#rafId = requestAnimationFrame(tick);
 		};
+
 		this.#rafId = requestAnimationFrame(tick);
 	}
 
@@ -75,13 +95,12 @@ class AudioStore {
 		}
 	}
 
+	// ─── Public API ───────────────────────────────────────────────────────────
+
 	addTrack(file: File): void {
 		if (!browser) return;
 
 		const url = URL.createObjectURL(file);
-		const audio = new Audio(url);
-		audio.preload = 'metadata';
-
 		const id = crypto.randomUUID();
 
 		const state: TrackState = {
@@ -96,39 +115,83 @@ class AudioStore {
 			duration: 0
 		};
 
-		audio.addEventListener('loadedmetadata', () => {
-			const track = this.tracks.find((t) => t.id === id);
-			if (track) track.duration = audio.duration;
-		});
+		const rec: HowlRecord = {
+			// howl is assigned below – the forward-reference is safe because
+			// Howl callbacks only fire asynchronously.
+			howl: null as unknown as Howl,
+			url,
+			soundId: null
+		};
 
-		audio.addEventListener('timeupdate', () => {
-			const track = this.tracks.find((t) => t.id === id);
-			if (track) track.currentTime = audio.currentTime;
-		});
+		const howl = new Howl({
+			src: [url],
+			// html5: true streams via HTMLAudioElement, ideal for large local
+			// files loaded through blob URLs (no full buffer decode required).
+			html5: true,
+			volume: this.#effectiveVolume(state),
+			loop: state.loop,
+			preload: true,
 
-		audio.addEventListener('ended', () => {
-			const track = this.tracks.find((t) => t.id === id);
-			if (track) {
-				track.playing = false;
-				track.currentTime = 0;
+			onload: () => {
+				const track = this.tracks.find((t) => t.id === id);
+				if (track) track.duration = howl.duration();
+			},
+
+			onend: (soundId: number) => {
+				const track = this.tracks.find((t) => t.id === id);
+				const r = this.#howls.get(id);
+				if (!track || !r) return;
+
+				// Only reset if this is the sound instance we're tracking
+				// and the track is not set to loop (Howler fires onend even
+				// for looping sounds at each cycle in some builds).
+				if (r.soundId === soundId && !track.loop) {
+					track.playing = false;
+					track.currentTime = 0;
+					r.soundId = null;
+				}
+			},
+
+			onloaderror: (_soundId: number, error: unknown) => {
+				console.error(`[aumix] Load error – "${state.name}":`, error);
+			},
+
+			onplayerror: (soundId: number, error: unknown) => {
+				const track = this.tracks.find((t) => t.id === id);
+				const r = this.#howls.get(id);
+				console.error(`[aumix] Play error – "${state.name}":`, error);
+
+				// Mobile browsers block autoplay until a user gesture.
+				// Howler fires this error; we wait for its internal unlock and retry.
+				howl.once('unlock', () => {
+					const t = this.tracks.find((tt) => tt.id === id);
+					if (t?.playing) {
+						const retryId = howl.play();
+						const rr = this.#howls.get(id);
+						if (rr) rr.soundId = retryId;
+					}
+				});
+
+				if (track) track.playing = false;
+				if (r && r.soundId === soundId) r.soundId = null;
 			}
 		});
 
-		this.#syncAudioVolume(state, audio);
-		audio.loop = state.loop;
-
-		this.#audioObjects.set(id, { audio, url });
+		rec.howl = howl;
+		this.#howls.set(id, rec);
 		this.tracks.push(state);
 		this.#startRaf();
 	}
 
 	removeTrack(id: string): void {
-		const objs = this.#audioObjects.get(id);
-		if (!objs) return;
+		const rec = this.#howls.get(id);
+		if (!rec) return;
 
-		objs.audio.pause();
-		URL.revokeObjectURL(objs.url);
-		this.#audioObjects.delete(id);
+		// unload() stops playback, destroys all sound instances and
+		// frees Web Audio nodes / HTMLAudioElement resources.
+		rec.howl.unload();
+		URL.revokeObjectURL(rec.url);
+		this.#howls.delete(id);
 
 		const idx = this.tracks.findIndex((t) => t.id === id);
 		if (idx !== -1) this.tracks.splice(idx, 1);
@@ -136,32 +199,55 @@ class AudioStore {
 		if (this.tracks.length === 0) this.#stopRaf();
 	}
 
-	async play(id: string): Promise<void> {
+	play(id: string): void {
 		const track = this.tracks.find((t) => t.id === id);
-		const objs = this.#audioObjects.get(id);
-		if (!track || !objs) return;
+		const rec = this.#howls.get(id);
+		if (!track || !rec) return;
 
-		try {
-			await objs.audio.play();
-			track.playing = true;
-		} catch (e) {
-			track.playing = false;
-			console.error('Failed to play track:', e);
+		// Capture the desired playback position before touching Howler.
+		// This covers the case where the user seeked the progress slider
+		// while the track was stopped / had ended (soundId === null).
+		const targetTime = track.currentTime;
+
+		let soundId = rec.soundId;
+
+		if (soundId !== null) {
+			// Resume the existing (paused) sound instance.
+			rec.howl.play(soundId);
+		} else {
+			// First play, or resuming after a non-looping sound ended.
+			soundId = rec.howl.play();
+			rec.soundId = soundId;
 		}
+
+		// Always sync per-instance settings after (re)starting.
+		rec.howl.volume(this.#effectiveVolume(track), soundId);
+		rec.howl.loop(track.loop, soundId);
+
+		// Apply any position that was set while the track was stopped.
+		// With html5:true the HTMLAudioElement seek is near-instant on blob URLs.
+		if (targetTime > 0) {
+			rec.howl.seek(targetTime, soundId);
+		}
+
+		track.playing = true;
 	}
 
 	pause(id: string): void {
 		const track = this.tracks.find((t) => t.id === id);
-		const objs = this.#audioObjects.get(id);
-		if (!track || !objs) return;
+		const rec = this.#howls.get(id);
+		if (!track || !rec) return;
 
-		objs.audio.pause();
+		if (rec.soundId !== null) {
+			// pause() preserves the current seek position so play() can resume.
+			rec.howl.pause(rec.soundId);
+		}
 		track.playing = false;
 	}
 
-	async playAll(): Promise<void> {
+	playAll(): void {
 		for (const track of this.tracks) {
-			await this.play(track.id);
+			this.play(track.id);
 		}
 	}
 
@@ -172,30 +258,27 @@ class AudioStore {
 	}
 
 	seekToStart(id: string): void {
-		const track = this.tracks.find((t) => t.id === id);
-		const objs = this.#audioObjects.get(id);
-		if (!track || !objs) return;
-
-		objs.audio.currentTime = 0;
-		track.currentTime = 0;
+		this.seek(id, 0);
 	}
 
 	seekToEnd(id: string): void {
 		const track = this.tracks.find((t) => t.id === id);
-		const objs = this.#audioObjects.get(id);
-		if (!track || !objs) return;
-
-		objs.audio.currentTime = track.duration;
-		track.currentTime = track.duration;
+		if (!track) return;
+		this.seek(id, track.duration);
 	}
 
 	seek(id: string, seconds: number): void {
 		const track = this.tracks.find((t) => t.id === id);
-		const objs = this.#audioObjects.get(id);
-		if (!track || !objs) return;
+		const rec = this.#howls.get(id);
+		if (!track || !rec) return;
 
 		const clamped = Math.max(0, Math.min(seconds, track.duration));
-		objs.audio.currentTime = clamped;
+
+		if (rec.soundId !== null) {
+			// seek(position, soundId) – setter form.
+			rec.howl.seek(clamped, rec.soundId);
+		}
+		// Always update state so play() can apply it if soundId was null.
 		track.currentTime = clamped;
 	}
 
@@ -204,8 +287,9 @@ class AudioStore {
 		if (!track) return;
 
 		track.volume = val;
+		// Unmute implicitly when the user drags the volume above zero.
 		if (val > 0 && track.muted) track.muted = false;
-		this.#syncTrackAudio(id);
+		this.#applyVolume(id);
 	}
 
 	toggleMute(id: string): void {
@@ -214,41 +298,45 @@ class AudioStore {
 
 		if (track.muted) {
 			track.muted = false;
-			const restored = track.volumeBeforeMute > 0 ? track.volumeBeforeMute : 10;
-			track.volume = restored;
+			track.volume = track.volumeBeforeMute > 0 ? track.volumeBeforeMute : 10;
 		} else {
 			track.volumeBeforeMute = track.volume;
 			track.muted = true;
 			track.volume = 0;
 		}
-		this.#syncTrackAudio(id);
+		this.#applyVolume(id);
 	}
 
 	toggleLoop(id: string): void {
 		const track = this.tracks.find((t) => t.id === id);
-		if (!track) return;
+		const rec = this.#howls.get(id);
+		if (!track || !rec) return;
 
 		track.loop = !track.loop;
-		this.#syncTrackAudio(id);
+
+		if (rec.soundId !== null) {
+			// Apply to the active sound instance.
+			rec.howl.loop(track.loop, rec.soundId);
+		}
+		// If soundId is null, play() will call howl.loop() on the next play.
 	}
 
 	setMasterVolume(val: number): void {
 		this.masterVolume = val;
 		if (val > 0 && this.masterMuted) this.masterMuted = false;
-		this.#syncAllTrackAudio();
+		this.#applyVolumeAll();
 	}
 
 	toggleMasterMute(): void {
 		if (this.masterMuted) {
 			this.masterMuted = false;
-			const restored = this.#masterVolumeBeforeMute > 0 ? this.#masterVolumeBeforeMute : 10;
-			this.masterVolume = restored;
+			this.masterVolume = this.#masterVolumeBeforeMute > 0 ? this.#masterVolumeBeforeMute : 10;
 		} else {
 			this.#masterVolumeBeforeMute = this.masterVolume;
 			this.masterMuted = true;
 			this.masterVolume = 0;
 		}
-		this.#syncAllTrackAudio();
+		this.#applyVolumeAll();
 	}
 }
 

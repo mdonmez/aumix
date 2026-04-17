@@ -57,7 +57,7 @@
 	}
 </script>
 
-<Card.Root size="sm" class="w-full max-w-sm">
+<Card.Root size="sm" class="w-full">
 	<Card.Header>
 		<Card.Title>
 			<h4 class="scroll-m-20 truncate text-xl font-semibold tracking-tight" title={track.name}>
