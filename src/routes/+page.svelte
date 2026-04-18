@@ -1,13 +1,25 @@
 <script lang="ts">
-	import { Sun, Moon, Volume1, Volume2, VolumeOff, Play, Pause } from '@lucide/svelte';
+	import {
+		Sun,
+		Moon,
+		Volume1,
+		Volume2,
+		VolumeOff,
+		Play,
+		Pause,
+		CircleQuestionMark
+	} from '@lucide/svelte';
 
 	import { toggleMode } from 'mode-watcher';
 	import { Button } from '$lib/components/ui/button/index.js';
 
 	import { Slider } from '$lib/components/ui/slider/index.js';
 	import { audioStore } from '$lib/audio.svelte.js';
+	import { keyboardFeedbackStore } from '$lib/keyboard-feedback.svelte.js';
 	import TrackCard from '$lib/components/TrackCard.svelte';
 	import DropZone from '$lib/components/DropZone.svelte';
+	import * as Popover from '$lib/components/ui/popover/index.js';
+	import { buttonVariants } from '$lib/components/ui/button/index.js';
 </script>
 
 <div class="flex min-h-screen flex-col">
@@ -56,20 +68,46 @@
 			/>
 		</div>
 
-		<Button onclick={toggleMode} size="icon">
-			<Sun
-				class="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all! dark:scale-0 dark:-rotate-90"
-			/>
-			<Moon
-				class="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all! dark:scale-100 dark:rotate-0"
-			/>
-			<span class="sr-only">Toggle theme</span>
-		</Button>
+		<div class="flex items-center gap-2">
+			<Popover.Root>
+				<Popover.Trigger class={buttonVariants({ variant: 'default', size: 'icon' })}>
+					<CircleQuestionMark class="h-[1.2rem] w-[1.2rem]" />
+					<span class="sr-only">Toggle help</span>
+				</Popover.Trigger>
+				<Popover.Content side="left" align="start">
+					<p>
+						Web-based audio mixer for playing multiple tracks simultaneously, controlling volume
+						levels and playback, and using shortcuts. Source code is available on
+						<a href="https://github.com/mdonmez/aumix" target="_blank" class="underline">
+							GitHub.
+						</a>
+					</p>
+				</Popover.Content>
+			</Popover.Root>
+
+			<Button onclick={toggleMode} size="icon">
+				<Sun
+					class="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all! dark:scale-0 dark:-rotate-90"
+				/>
+				<Moon
+					class="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all! dark:scale-100 dark:rotate-0"
+				/>
+				<span class="sr-only">Toggle theme</span>
+			</Button>
+		</div>
 	</header>
 
 	<div class="grid grid-cols-[repeat(auto-fill,minmax(370px,1fr))] gap-4 p-6">
-		{#each audioStore.tracks as track (track.id)}
-			<TrackCard {track} />
+		{#each audioStore.tracks as track, index (track.id)}
+			<TrackCard
+				{track}
+				{index}
+				flashNonce={index === 0
+					? keyboardFeedbackStore.firstCardFlashNonce
+					: index === 1
+						? keyboardFeedbackStore.secondCardFlashNonce
+						: 0}
+			/>
 		{/each}
 
 		<DropZone />

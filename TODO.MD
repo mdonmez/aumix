@@ -1,8 +1,8 @@
 - [ ] üstteki ses sliderının yanına mevcutta kaç itemin oynadığı gerçek zamanlı yazılacak.
 - [ ] ses ekledikten hemen sonra sesin uzunluğu yazacak, ilk playa basmaya gerek kalmayacak.
-- [ ] 1 ve 2 özel kartlar olacak. 1. kart için yukarı ve aşağı ok ile seste oynama, 2. kart için ise sol ve sağ ok ile seste oynama yapılabilecek.
+- [x] 1 ve 2 özel kartlar olacak. 1. kart için yukarı ve aşağı ok ile seste oynama, 2. kart için ise sol ve sağ ok ile seste oynama yapılabilecek.
 - [ ] kartlar kendi aralarında yerlerinin değiştirilmesi için drag-and-drop özelliği eklenecek.
-- [ ] kartlara numaralar eklenecek.
-- [ ] sağ üste bir (i) info butonu eklenecek.
-- [ ] tema değiştiricinin soluna command#dialog eklecek (1 ve 2) kontrollerini anlatmak için.
+- [x] kartlara numaralar eklenecek.
+- [x] sağ üste bir (i) info butonu eklenecek.
+- [x] tema değiştiricinin soluna command#dialog eklecek (1 ve 2) kontrollerini anlatmak için.
 - [x] sesin klavyeden ve işletin sisteminden direkt kontrolü engellenecek (mümkünse)

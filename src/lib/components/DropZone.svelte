@@ -88,7 +88,7 @@
 			</Empty.Media>
 			<Empty.Title>{isDragging ? 'Drop to add' : 'Add new audio'}</Empty.Title>
 			<Empty.Description>
-				Drag and drop the audio file or click the button below to select it.
+				Drag and drop the audio file(s) or click the button below to select them.
 			</Empty.Description>
 		</Empty.Header>
 		<Empty.Content>

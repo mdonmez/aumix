@@ -286,9 +286,13 @@ class AudioStore {
 		const track = this.tracks.find((t) => t.id === id);
 		if (!track) return;
 
-		track.volume = val;
+		const clamped = Math.max(0, Math.min(100, val));
+		const shouldUnmute = track.muted && clamped > 0;
+		if (clamped === track.volume && !shouldUnmute) return;
+
+		track.volume = clamped;
 		// Unmute implicitly when the user drags the volume above zero.
-		if (val > 0 && track.muted) track.muted = false;
+		if (shouldUnmute) track.muted = false;
 		this.#applyVolume(id);
 	}
 

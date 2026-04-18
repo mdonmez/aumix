@@ -16,13 +16,21 @@
 	import { Slider } from '$lib/components/ui/slider/index.js';
 	import { audioStore, type TrackState } from '$lib/audio.svelte.js';
 
+	import { Badge } from '$lib/components/ui/badge/index.js';
+
 	interface Props {
 		track: TrackState;
+		index: number;
+		flashNonce?: number;
 	}
 
-	let { track }: Props = $props();
+	let { track, index, flashNonce = 0 }: Props = $props();
 	let isSeeking = $state(false);
 	let progressValue = $state(0);
+	let isFlashActive = $state(false);
+	let flashResetTimer: ReturnType<typeof setTimeout> | null = null;
+
+	const shortcutLabel = $derived(index === 0 ? '↑ ↓ ⋅ 1' : index === 1 ? '← → ⋅ 2' : '');
 
 	function formatTime(seconds: number): string {
 		if (!isFinite(seconds) || isNaN(seconds)) return '0:00';
@@ -43,6 +51,28 @@
 		}
 	});
 
+	$effect(() => {
+		if (flashNonce === 0) return;
+
+		isFlashActive = true;
+
+		if (flashResetTimer !== null) {
+			clearTimeout(flashResetTimer);
+		}
+
+		flashResetTimer = setTimeout(() => {
+			isFlashActive = false;
+			flashResetTimer = null;
+		}, 80);
+
+		return () => {
+			if (flashResetTimer !== null) {
+				clearTimeout(flashResetTimer);
+				flashResetTimer = null;
+			}
+		};
+	});
+
 	function handleSeekCommit(val: number): void {
 		audioStore.seek(track.id, (val / 100) * track.duration);
 		isSeeking = false;
@@ -57,13 +87,21 @@
 	}
 </script>
 
-<Card.Root size="sm" class="w-full">
+<Card.Root
+	size="sm"
+	class={`w-full transition-[box-shadow,ring-color] duration-150 ${isFlashActive ? 'shadow-[0_0_0_1px_hsl(var(--primary)/0.7)] ring-2 ring-primary' : ''}`}
+>
 	<Card.Header>
-		<Card.Title>
-			<h4 class="scroll-m-20 truncate text-xl font-semibold tracking-tight" title={track.name}>
-				{track.name}
-			</h4>
-		</Card.Title>
+		<div class="flex items-center gap-3">
+			<Badge class="size-8 rounded-full p-0 font-mono text-sm tabular-nums" variant="outline">
+				{index + 1}
+			</Badge>
+			<Card.Title>
+				<h4 class="scroll-m-20 truncate text-xl font-semibold tracking-tight" title={track.name}>
+					{track.name}
+				</h4>
+			</Card.Title>
+		</div>
 		<Card.Action>
 			<div class="flex items-center gap-1">
 				<Button
@@ -107,21 +145,33 @@
 			</div>
 
 			<!-- Playback controls row -->
-			<div class="flex items-center justify-center gap-2">
-				<Button variant="secondary" onclick={() => audioStore.seekToStart(track.id)}>
-					<SkipBack /> Roll
-				</Button>
-				<Button
-					size="icon"
-					class={track.playing ? 'rounded-full transition-none!' : 'transition-none!'}
-					onclick={togglePlayback}
-				>
-					{#if track.playing}
-						<Pause />
-					{:else}
-						<Play />
+			<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+				<div class="justify-self-start">
+					{#if shortcutLabel}
+						<kbd
+							class={`pointer-events-none inline-flex h-5 items-center gap-1 rounded-full border bg-muted px-2 font-mono text-[10px] font-medium opacity-100 transition-colors duration-150 select-none ${isFlashActive ? 'border-primary text-primary' : 'text-muted-foreground'}`}
+						>
+							<span class="text-xs">{shortcutLabel}</span>
+						</kbd>
 					{/if}
-				</Button>
+				</div>
+				<div class="flex items-center justify-center gap-2 justify-self-center">
+					<Button variant="secondary" onclick={() => audioStore.seekToStart(track.id)}>
+						<SkipBack /> Roll
+					</Button>
+					<Button
+						size="icon"
+						class={track.playing ? 'rounded-full transition-none!' : 'transition-none!'}
+						onclick={togglePlayback}
+					>
+						{#if track.playing}
+							<Pause />
+						{:else}
+							<Play />
+						{/if}
+					</Button>
+				</div>
+				<div></div>
 			</div>
 
 			<!-- Separator -->
