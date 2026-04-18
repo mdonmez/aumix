@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import './layout.css';
 	import { ModeWatcher } from 'mode-watcher';
+	import { Toaster } from '$lib/components/ui/sonner/index.js';
 	import favicon from '$lib/assets/favicon.svg';
 	import { audioStore } from '$lib/audio.svelte.js';
 	import { keyboardFeedbackStore } from '$lib/keyboard-feedback.svelte.js';
@@ -262,5 +263,6 @@
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 <ModeWatcher />
+<Toaster />
 
 {@render children()}

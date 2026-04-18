@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { FileMusic } from '@lucide/svelte';
+	import { toast } from 'svelte-sonner';
 
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Empty from '$lib/components/ui/empty/index.js';
@@ -28,10 +29,27 @@
 
 	function handleFiles(files: FileList | null): void {
 		if (!files) return;
+
+		const rejectedFiles: string[] = [];
 		for (const file of files) {
 			if (isAudioFile(file)) {
 				audioStore.addTrack(file);
+			} else {
+				rejectedFiles.push(file.name);
 			}
+		}
+
+		if (rejectedFiles.length > 0) {
+			toast('The following files could not be identified as audio files:', {
+				position: 'top-center',
+				style: 'color: #ef4444;',
+				descriptionClass: 'whitespace-pre-line',
+				description: rejectedFiles.map((fileName) => `• ${fileName}`).join('\n'),
+				action: {
+					label: 'OK',
+					onClick: () => console.info('OK')
+				}
+			});
 		}
 	}
 
