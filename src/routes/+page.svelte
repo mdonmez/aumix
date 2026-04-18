@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { DragDropProvider, DragOverlay } from '@dnd-kit-svelte/svelte';
 	import {
 		Sun,
 		Moon,
@@ -18,6 +19,8 @@
 	import { Slider } from '$lib/components/ui/slider/index.js';
 	import { audioStore } from '$lib/audio.svelte.js';
 	import { keyboardFeedbackStore } from '$lib/keyboard-feedback.svelte.js';
+	import { sensors } from '$lib';
+	import SortableTrackCard from '$lib/components/SortableTrackCard.svelte';
 	import TrackCard from '$lib/components/TrackCard.svelte';
 	import DropZone from '$lib/components/DropZone.svelte';
 	import * as Popover from '$lib/components/ui/popover/index.js';
@@ -119,19 +122,47 @@
 		</div>
 	</header>
 
-	<div class="grid grid-cols-[repeat(auto-fill,minmax(370px,1fr))] gap-4 p-6">
-		{#each audioStore.tracks as track, index (track.id)}
-			<TrackCard
-				{track}
-				{index}
-				flashActive={index === 0 && keyboardFeedbackStore.firstCardFlashTrackId === track.id
-					? keyboardFeedbackStore.firstCardIsActive
-					: index === 1 && keyboardFeedbackStore.secondCardFlashTrackId === track.id
-						? keyboardFeedbackStore.secondCardIsActive
-						: false}
-			/>
-		{/each}
+	<DragDropProvider
+		{sensors}
+		onDragOver={(event) => {
+			const { source, target } = event.operation;
+			if (source?.type !== 'track' || !target) return;
 
-		<DropZone />
-	</div>
+			const sourceIndex = audioStore.tracks.findIndex((track) => track.id === source.id);
+			const targetIndex = audioStore.tracks.findIndex((track) => track.id === target.id);
+			if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) return;
+
+			const nextTracks = [...audioStore.tracks];
+			const [movedTrack] = nextTracks.splice(sourceIndex, 1);
+			nextTracks.splice(targetIndex, 0, movedTrack);
+			audioStore.reorderTracks(nextTracks);
+		}}
+	>
+		<div class="grid grid-cols-[repeat(auto-fill,minmax(370px,1fr))] gap-4 p-6">
+			{#each audioStore.tracks as track, index (track.id)}
+				<SortableTrackCard
+					id={track.id}
+					{track}
+					{index}
+					flashActive={index === 0 && keyboardFeedbackStore.firstCardFlashTrackId === track.id
+						? keyboardFeedbackStore.firstCardIsActive
+						: index === 1 && keyboardFeedbackStore.secondCardFlashTrackId === track.id
+							? keyboardFeedbackStore.secondCardIsActive
+							: false}
+				/>
+			{/each}
+
+			<DropZone />
+		</div>
+
+		<DragOverlay>
+			{#snippet children(source)}
+				{@const trackIndex = audioStore.tracks.findIndex((track) => track.id === source.id)}
+				{@const track = trackIndex === -1 ? null : audioStore.tracks[trackIndex]}
+				{#if track}
+					<TrackCard {track} index={trackIndex} />
+				{/if}
+			{/snippet}
+		</DragOverlay>
+	</DragDropProvider>
 </div>

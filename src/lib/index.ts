@@ -1,1 +1,3 @@
-// place files you want to import through the `$lib` alias in this folder.
+import { KeyboardSensor, PointerSensor } from '@dnd-kit-svelte/svelte';
+
+export const sensors = [PointerSensor, KeyboardSensor];

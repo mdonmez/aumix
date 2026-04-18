@@ -15,6 +15,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Slider } from '$lib/components/ui/slider/index.js';
 	import { audioStore, type TrackState } from '$lib/audio.svelte.js';
+	import { GripVertical } from '@lucide/svelte';
 
 	import { Badge } from '$lib/components/ui/badge/index.js';
 
@@ -22,12 +23,14 @@
 		track: TrackState;
 		index: number;
 		flashActive?: boolean;
+		dragHandleRef?: (node: HTMLElement) => void;
 	}
 
-	let { track, index, flashActive = false }: Props = $props();
+	let { track, index, flashActive = false, dragHandleRef }: Props = $props();
 	let isSeeking = $state(false);
 	let progressValue = $state(0);
 	let isFlashActive = $state(false);
+	const noop = () => {};
 
 	const shortcutLabel = $derived(index === 0 ? '↑ ↓ ⋅ 1' : index === 1 ? '← → ⋅ 2' : '');
 
@@ -73,12 +76,23 @@
 	class={`w-full transition-[box-shadow,ring-color] duration-150 ${isFlashActive ? 'shadow-[0_0_0_1px_hsl(var(--primary)/0.7)] ring-2 ring-primary' : ''}`}
 >
 	<Card.Header>
-		<div class="flex items-center gap-3">
+		<div class="flex min-w-0 items-center gap-2">
+			<button
+				type="button"
+				aria-label="Drag to reorder track"
+				class="flex size-8 shrink-0 cursor-grab items-center justify-center rounded-full border border-border bg-background/95 text-muted-foreground transition-colors hover:text-foreground active:cursor-grabbing"
+				{@attach dragHandleRef ?? noop}
+			>
+				<GripVertical class="h-4 w-4" />
+			</button>
 			<Badge class="size-8 rounded-full p-0 font-mono text-sm tabular-nums" variant="outline">
 				{index + 1}
 			</Badge>
-			<Card.Title>
-				<h4 class="scroll-m-20 truncate text-xl font-semibold tracking-tight" title={track.name}>
+			<Card.Title class="w-full min-w-0 flex-1">
+				<h4
+					class="block min-w-0 scroll-m-20 truncate text-xl font-semibold tracking-tight"
+					title={track.name}
+				>
 					{track.name}
 				</h4>
 			</Card.Title>
