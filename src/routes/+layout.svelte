@@ -25,22 +25,33 @@
 			}
 		};
 
+		const mediaSessionActions: MediaSessionAction[] = [
+			'play',
+			'pause',
+			'previoustrack',
+			'nexttrack',
+			'stop',
+			'seekbackward',
+			'seekforward',
+			'seekto'
+		];
+
 		window.addEventListener('keydown', handleKeydown, true);
 
-		try {
-			navigator.mediaSession?.setActionHandler('play', null);
-			navigator.mediaSession?.setActionHandler('pause', null);
-			navigator.mediaSession?.setActionHandler('previoustrack', null);
-			navigator.mediaSession?.setActionHandler('nexttrack', null);
-			navigator.mediaSession?.setActionHandler('seekbackward', null);
-			navigator.mediaSession?.setActionHandler('seekforward', null);
-			navigator.mediaSession?.setActionHandler('stop', null);
-		} catch {
-			// Ignore browsers that do not allow clearing handlers.
+		if ('mediaSession' in navigator) {
+			for (const action of mediaSessionActions) {
+				navigator.mediaSession.setActionHandler(action, () => {});
+			}
 		}
 
 		return () => {
 			window.removeEventListener('keydown', handleKeydown, true);
+
+			if ('mediaSession' in navigator) {
+				for (const action of mediaSessionActions) {
+					navigator.mediaSession.setActionHandler(action, null);
+				}
+			}
 		};
 	});
 </script>

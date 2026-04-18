@@ -15,13 +15,13 @@
 		class="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background px-6 py-4"
 	>
 		<div class="flex items-center gap-3">
-			<h3 class="scroll-m-20 text-2xl font-semibold tracking-tight">aumix</h3>
+			<h3 class="scroll-m-20 text-2xl font-semibold tracking-tight">Aumix</h3>
 
 			<div class="h-5 w-px shrink-0 bg-border"></div>
 
 			<Button
 				size="icon"
-				class={audioStore.masterPlaying ? 'rounded-full !transition-none' : '!transition-none'}
+				class={audioStore.masterPlaying ? 'rounded-full transition-none!' : 'transition-none!'}
 				disabled={audioStore.tracks.length === 0}
 				onclick={() => (audioStore.masterPlaying ? audioStore.pauseAll() : audioStore.playAll())}
 			>
@@ -58,10 +58,10 @@
 
 		<Button onclick={toggleMode} size="icon">
 			<Sun
-				class="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 !transition-all dark:scale-0 dark:-rotate-90"
+				class="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all! dark:scale-0 dark:-rotate-90"
 			/>
 			<Moon
-				class="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 !transition-all dark:scale-100 dark:rotate-0"
+				class="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all! dark:scale-100 dark:rotate-0"
 			/>
 			<span class="sr-only">Toggle theme</span>
 		</Button>

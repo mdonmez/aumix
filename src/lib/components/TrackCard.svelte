@@ -113,7 +113,7 @@
 				</Button>
 				<Button
 					size="icon"
-					class={track.playing ? 'rounded-full !transition-none' : '!transition-none'}
+					class={track.playing ? 'rounded-full transition-none!' : 'transition-none!'}
 					onclick={togglePlayback}
 				>
 					{#if track.playing}

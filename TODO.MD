@@ -5,4 +5,4 @@
 - [ ] kartlara numaralar eklenecek.
 - [ ] sağ üste bir (i) info butonu eklenecek.
 - [ ] tema değiştiricinin soluna command#dialog eklecek (1 ve 2) kontrollerini anlatmak için.
-- [ ] sesin klavyeden ve işletin sisteminden direkt kontrolü engellenecek (mümkünse)
+- [x] sesin klavyeden ve işletin sisteminden direkt kontrolü engellenecek (mümkünse)
