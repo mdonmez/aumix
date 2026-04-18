@@ -1,4 +1,4 @@
-- [ ] üstteki ses sliderının yanına mevcutta kaç itemin oynadığı gerçek zamanlı yazılacak.
+- [x] üstteki ses sliderının yanına mevcutta kaç itemin oynadığı gerçek zamanlı yazılacak.
 - [ ] ses ekledikten hemen sonra sesin uzunluğu yazacak, ilk playa basmaya gerek kalmayacak.
 - [x] 1 ve 2 özel kartlar olacak. 1. kart için yukarı ve aşağı ok ile seste oynama, 2. kart için ise sol ve sağ ok ile seste oynama yapılabilecek.
 - [ ] kartlar kendi aralarında yerlerinin değiştirilmesi için drag-and-drop özelliği eklenecek.

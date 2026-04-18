@@ -25,6 +25,7 @@ class AudioStore {
 	masterVolume = $state(75);
 	masterMuted = $state(false);
 	masterPlaying = $derived(this.tracks.some((t) => t.playing));
+	playingTracksCount = $derived(this.tracks.filter((t) => t.playing).length);
 
 	#masterVolumeBeforeMute = 75;
 	#howls = new Map<string, HowlRecord>();

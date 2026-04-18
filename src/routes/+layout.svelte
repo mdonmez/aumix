@@ -134,11 +134,11 @@
 					pressedArrowKeys.add(event.key);
 
 					if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-						keyboardFeedbackStore.flashCard(0);
+						keyboardFeedbackStore.flashCard(0, audioStore.tracks[0]?.id ?? null);
 					}
 
 					if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-						keyboardFeedbackStore.flashCard(1);
+						keyboardFeedbackStore.flashCard(1, audioStore.tracks[1]?.id ?? null);
 					}
 
 					applyArrowVolumeStep();
@@ -195,7 +195,7 @@
 				if (firstTrack) {
 					event.preventDefault();
 					event.stopPropagation();
-					keyboardFeedbackStore.flashCard(0);
+					keyboardFeedbackStore.flashCard(0, firstTrack.id);
 					togglePlayback(firstTrack.id);
 				}
 				return;
@@ -206,7 +206,7 @@
 				if (secondTrack) {
 					event.preventDefault();
 					event.stopPropagation();
-					keyboardFeedbackStore.flashCard(1);
+					keyboardFeedbackStore.flashCard(1, secondTrack.id);
 					togglePlayback(secondTrack.id);
 				}
 			}

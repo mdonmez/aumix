@@ -12,6 +12,7 @@
 
 	import { toggleMode } from 'mode-watcher';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import * as ButtonGroup from '$lib/components/ui/button-group/index.js';
 
 	import { Slider } from '$lib/components/ui/slider/index.js';
 	import { audioStore } from '$lib/audio.svelte.js';
@@ -31,18 +32,29 @@
 
 			<div class="h-5 w-px shrink-0 bg-border"></div>
 
-			<Button
-				size="icon"
-				class={audioStore.masterPlaying ? 'rounded-full transition-none!' : 'transition-none!'}
-				disabled={audioStore.tracks.length === 0}
-				onclick={() => (audioStore.masterPlaying ? audioStore.pauseAll() : audioStore.playAll())}
-			>
-				{#if audioStore.masterPlaying}
-					<Pause />
-				{:else}
-					<Play />
-				{/if}
-			</Button>
+			<ButtonGroup.Root>
+				<Button
+					size="icon"
+					class={audioStore.masterPlaying ? 'rounded-full transition-none!' : 'transition-none!'}
+					disabled={audioStore.tracks.length === 0}
+					onclick={() => (audioStore.masterPlaying ? audioStore.pauseAll() : audioStore.playAll())}
+				>
+					{#if audioStore.masterPlaying}
+						<Pause />
+					{:else}
+						<Play />
+					{/if}
+				</Button>
+
+				<Button
+					variant="secondary"
+					class="pointer-events-none cursor-default rounded-full px-4 font-mono uppercase"
+					aria-disabled="true"
+					tabindex={-1}
+				>
+					{audioStore.playingTracksCount} PLAYING
+				</Button>
+			</ButtonGroup.Root>
 
 			<Button
 				variant="ghost"
@@ -102,9 +114,9 @@
 			<TrackCard
 				{track}
 				{index}
-				flashNonce={index === 0
+				flashNonce={index === 0 && keyboardFeedbackStore.firstCardFlashTrackId === track.id
 					? keyboardFeedbackStore.firstCardFlashNonce
-					: index === 1
+					: index === 1 && keyboardFeedbackStore.secondCardFlashTrackId === track.id
 						? keyboardFeedbackStore.secondCardFlashNonce
 						: 0}
 			/>
