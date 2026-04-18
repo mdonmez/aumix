@@ -124,6 +124,22 @@ class AudioStore {
 			soundId: null
 		};
 
+		// Prime duration from metadata so UI can show length and allow scrubbing
+		// before the first playback starts.
+		const metadataProbe = new Audio(url);
+		metadataProbe.preload = 'metadata';
+		metadataProbe.addEventListener(
+			'loadedmetadata',
+			() => {
+				const track = this.tracks.find((t) => t.id === id);
+				if (!track) return;
+				if (isFinite(metadataProbe.duration) && metadataProbe.duration > 0) {
+					track.duration = metadataProbe.duration;
+				}
+			},
+			{ once: true }
+		);
+
 		const howl = new Howl({
 			src: [url],
 			// html5: true streams via HTMLAudioElement, ideal for large local
