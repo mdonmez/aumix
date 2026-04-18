@@ -87,6 +87,8 @@
 
 		const clearArrowState = (): void => {
 			pressedArrowKeys.clear();
+			keyboardFeedbackStore.releaseCard(0);
+			keyboardFeedbackStore.releaseCard(1);
 			stopArrowRepeatLoop();
 		};
 
@@ -103,6 +105,18 @@
 
 		const handleKeydown = (event: KeyboardEvent): void => {
 			if (event.repeat && arrowKeys.has(event.key)) {
+				event.preventDefault();
+				event.stopPropagation();
+				return;
+			}
+
+			if (
+				event.repeat &&
+				(event.code === 'Digit1' ||
+					event.code === 'Numpad1' ||
+					event.code === 'Digit2' ||
+					event.code === 'Numpad2')
+			) {
 				event.preventDefault();
 				event.stopPropagation();
 				return;
@@ -135,11 +149,11 @@
 					pressedArrowKeys.add(event.key);
 
 					if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-						keyboardFeedbackStore.flashCard(0, audioStore.tracks[0]?.id ?? null);
+						keyboardFeedbackStore.pressCard(0, audioStore.tracks[0]?.id ?? null);
 					}
 
 					if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-						keyboardFeedbackStore.flashCard(1, audioStore.tracks[1]?.id ?? null);
+						keyboardFeedbackStore.pressCard(1, audioStore.tracks[1]?.id ?? null);
 					}
 
 					applyArrowVolumeStep();
@@ -150,18 +164,25 @@
 			}
 
 			if (event.code === 'Digit1' || event.code === 'Numpad1') {
-				if (audioStore.tracks[0]) {
+				const firstTrack = audioStore.tracks[0];
+				if (firstTrack) {
 					event.preventDefault();
 					event.stopPropagation();
+					keyboardFeedbackStore.flashCard(0, firstTrack.id);
+					togglePlayback(firstTrack.id);
 				}
 				return;
 			}
 
 			if (event.code === 'Digit2' || event.code === 'Numpad2') {
-				if (audioStore.tracks[1]) {
+				const secondTrack = audioStore.tracks[1];
+				if (secondTrack) {
 					event.preventDefault();
 					event.stopPropagation();
+					keyboardFeedbackStore.flashCard(1, secondTrack.id);
+					togglePlayback(secondTrack.id);
 				}
+				return;
 			}
 		};
 
@@ -185,6 +206,18 @@
 
 				pressedArrowKeys.delete(event.key);
 
+				if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+					if (!pressedArrowKeys.has('ArrowUp') && !pressedArrowKeys.has('ArrowDown')) {
+						keyboardFeedbackStore.releaseCard(0);
+					}
+				}
+
+				if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+					if (!pressedArrowKeys.has('ArrowLeft') && !pressedArrowKeys.has('ArrowRight')) {
+						keyboardFeedbackStore.releaseCard(1);
+					}
+				}
+
 				if (pressedArrowKeys.size === 0) {
 					stopArrowRepeatLoop();
 				}
@@ -192,24 +225,19 @@
 			}
 
 			if (event.code === 'Digit1' || event.code === 'Numpad1') {
-				const firstTrack = audioStore.tracks[0];
-				if (firstTrack) {
+				if (audioStore.tracks[0]) {
 					event.preventDefault();
 					event.stopPropagation();
-					keyboardFeedbackStore.flashCard(0, firstTrack.id);
-					togglePlayback(firstTrack.id);
 				}
 				return;
 			}
 
 			if (event.code === 'Digit2' || event.code === 'Numpad2') {
-				const secondTrack = audioStore.tracks[1];
-				if (secondTrack) {
+				if (audioStore.tracks[1]) {
 					event.preventDefault();
 					event.stopPropagation();
-					keyboardFeedbackStore.flashCard(1, secondTrack.id);
-					togglePlayback(secondTrack.id);
 				}
+				return;
 			}
 		};
 

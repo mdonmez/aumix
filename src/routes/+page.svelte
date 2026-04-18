@@ -124,11 +124,11 @@
 			<TrackCard
 				{track}
 				{index}
-				flashNonce={index === 0 && keyboardFeedbackStore.firstCardFlashTrackId === track.id
-					? keyboardFeedbackStore.firstCardFlashNonce
+				flashActive={index === 0 && keyboardFeedbackStore.firstCardFlashTrackId === track.id
+					? keyboardFeedbackStore.firstCardIsActive
 					: index === 1 && keyboardFeedbackStore.secondCardFlashTrackId === track.id
-						? keyboardFeedbackStore.secondCardFlashNonce
-						: 0}
+						? keyboardFeedbackStore.secondCardIsActive
+						: false}
 			/>
 		{/each}
 

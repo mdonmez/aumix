@@ -21,14 +21,13 @@
 	interface Props {
 		track: TrackState;
 		index: number;
-		flashNonce?: number;
+		flashActive?: boolean;
 	}
 
-	let { track, index, flashNonce = 0 }: Props = $props();
+	let { track, index, flashActive = false }: Props = $props();
 	let isSeeking = $state(false);
 	let progressValue = $state(0);
 	let isFlashActive = $state(false);
-	let flashResetTimer: ReturnType<typeof setTimeout> | null = null;
 
 	const shortcutLabel = $derived(index === 0 ? '↑ ↓ ⋅ 1' : index === 1 ? '← → ⋅ 2' : '');
 
@@ -52,25 +51,7 @@
 	});
 
 	$effect(() => {
-		if (flashNonce === 0) return;
-
-		isFlashActive = true;
-
-		if (flashResetTimer !== null) {
-			clearTimeout(flashResetTimer);
-		}
-
-		flashResetTimer = setTimeout(() => {
-			isFlashActive = false;
-			flashResetTimer = null;
-		}, 80);
-
-		return () => {
-			if (flashResetTimer !== null) {
-				clearTimeout(flashResetTimer);
-				flashResetTimer = null;
-			}
-		};
+		isFlashActive = flashActive;
 	});
 
 	function handleSeekCommit(val: number): void {
