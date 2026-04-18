@@ -1,7 +1,7 @@
 <script lang="ts">
 	import {
 		Repeat,
-		X,
+		Trash2,
 		Volume1,
 		Volume2,
 		VolumeOff,
@@ -116,7 +116,7 @@
 					size="icon-sm"
 					onclick={() => audioStore.removeTrack(track.id)}
 				>
-					<X />
+					<Trash2 />
 				</Button>
 			</div>
 		</Card.Action>

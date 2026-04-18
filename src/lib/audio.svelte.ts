@@ -200,6 +200,12 @@ class AudioStore {
 		if (this.tracks.length === 0) this.#stopRaf();
 	}
 
+	clearAll(): void {
+		for (const track of [...this.tracks]) {
+			this.removeTrack(track.id);
+		}
+	}
+
 	play(id: string): void {
 		const track = this.tracks.find((t) => t.id === id);
 		const rec = this.#howls.get(id);

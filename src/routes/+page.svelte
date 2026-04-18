@@ -7,7 +7,8 @@
 		VolumeOff,
 		Play,
 		Pause,
-		CircleQuestionMark
+		CircleQuestionMark,
+		Trash2
 	} from '@lucide/svelte';
 
 	import { toggleMode } from 'mode-watcher';
@@ -48,11 +49,20 @@
 
 				<Button
 					variant="secondary"
-					class="pointer-events-none cursor-default rounded-full px-4 font-mono uppercase"
+					class="pointer-events-none cursor-default rounded-full font-mono uppercase"
 					aria-disabled="true"
 					tabindex={-1}
 				>
 					{audioStore.playingTracksCount} PLAYING
+				</Button>
+
+				<Button
+					variant="destructive"
+					class="rounded-full"
+					disabled={audioStore.tracks.length === 0}
+					onclick={() => audioStore.clearAll()}
+				>
+					<Trash2 class="h-4 w-4" /> Clear All
 				</Button>
 			</ButtonGroup.Root>
 
