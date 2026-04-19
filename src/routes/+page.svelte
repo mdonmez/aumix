@@ -32,6 +32,95 @@
 	let dragTargetTrackId = $state<string | null>(null);
 	let swapFeedbackTrackIds = $state<string[]>([]);
 	let swapFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
+	let autoScrollFrameId: number | null = null;
+	let autoScrollVelocity = 0;
+	let hasDragAutoScrollListeners = false;
+
+	const AUTO_SCROLL_EDGE_PX = 130;
+	const AUTO_SCROLL_MAX_SPEED_PX = 22;
+
+	function stopAutoScrollLoop(): void {
+		if (autoScrollFrameId !== null) {
+			cancelAnimationFrame(autoScrollFrameId);
+			autoScrollFrameId = null;
+		}
+
+		autoScrollVelocity = 0;
+	}
+
+	function stepAutoScroll(): void {
+		if (autoScrollVelocity === 0 || !dragSourceTrackId) {
+			autoScrollFrameId = null;
+			return;
+		}
+
+		const scrollingElement = document.scrollingElement;
+		if (!scrollingElement) {
+			autoScrollFrameId = null;
+			return;
+		}
+
+		const maxScrollTop = scrollingElement.scrollHeight - window.innerHeight;
+		const nextScrollTop = Math.min(
+			Math.max(scrollingElement.scrollTop + autoScrollVelocity, 0),
+			maxScrollTop
+		);
+
+		if (nextScrollTop === scrollingElement.scrollTop) {
+			autoScrollFrameId = null;
+			return;
+		}
+
+		scrollingElement.scrollTop = nextScrollTop;
+		autoScrollFrameId = requestAnimationFrame(stepAutoScroll);
+	}
+
+	function updateAutoScrollVelocity(clientY: number): void {
+		const viewportHeight = window.innerHeight;
+		const topEdge = AUTO_SCROLL_EDGE_PX;
+		const bottomEdge = viewportHeight - AUTO_SCROLL_EDGE_PX;
+
+		if (clientY < topEdge) {
+			const intensity = Math.min((topEdge - clientY) / AUTO_SCROLL_EDGE_PX, 1);
+			autoScrollVelocity = -Math.max(1, intensity * intensity * AUTO_SCROLL_MAX_SPEED_PX);
+		} else if (clientY > bottomEdge) {
+			const intensity = Math.min((clientY - bottomEdge) / AUTO_SCROLL_EDGE_PX, 1);
+			autoScrollVelocity = Math.max(1, intensity * intensity * AUTO_SCROLL_MAX_SPEED_PX);
+		} else {
+			autoScrollVelocity = 0;
+		}
+
+		if (autoScrollVelocity === 0) {
+			if (autoScrollFrameId !== null) {
+				cancelAnimationFrame(autoScrollFrameId);
+				autoScrollFrameId = null;
+			}
+			return;
+		}
+
+		if (autoScrollFrameId === null) {
+			autoScrollFrameId = requestAnimationFrame(stepAutoScroll);
+		}
+	}
+
+	function handleGlobalDragOver(event: DragEvent): void {
+		if (!dragSourceTrackId) return;
+		updateAutoScrollVelocity(event.clientY);
+	}
+
+	function removeDragAutoScrollListeners(): void {
+		if (!hasDragAutoScrollListeners) return;
+
+		document.removeEventListener('dragover', handleGlobalDragOver);
+		hasDragAutoScrollListeners = false;
+	}
+
+	function setupDragAutoScrollListeners(): void {
+		if (hasDragAutoScrollListeners) return;
+
+		document.addEventListener('dragover', handleGlobalDragOver);
+		hasDragAutoScrollListeners = true;
+	}
 
 	function clearSwapFeedback(): void {
 		if (swapFeedbackTimer !== null) {
@@ -54,11 +143,15 @@
 
 	onDestroy(() => {
 		clearSwapFeedback();
+		stopAutoScrollLoop();
+		removeDragAutoScrollListeners();
 	});
 
 	function resetDragState(): void {
 		dragSourceTrackId = null;
 		dragTargetTrackId = null;
+		stopAutoScrollLoop();
+		removeDragAutoScrollListeners();
 	}
 
 	function swapTracks(sourceTrackId: string, targetTrackId: string): void {
@@ -75,6 +168,7 @@
 	function handleDragStart(event: DragEvent, trackId: string): void {
 		dragSourceTrackId = trackId;
 		dragTargetTrackId = null;
+		setupDragAutoScrollListeners();
 
 		const handle = event.currentTarget as HTMLElement | null;
 		const cardShell = handle?.closest('.track-dnd-item') as HTMLElement | null;
@@ -106,6 +200,7 @@
 		event.preventDefault();
 		if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
 		dragTargetTrackId = targetTrackId;
+		updateAutoScrollVelocity(event.clientY);
 	}
 
 	function handleDragLeave(event: DragEvent, targetTrackId: string): void {
@@ -131,7 +226,7 @@
 
 <div class="flex min-h-screen flex-col">
 	<header
-		class="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background px-6 py-4"
+		class="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background px-6 py-4"
 	>
 		<div class="flex items-center gap-3">
 			<h3 class="scroll-m-20 text-2xl font-semibold tracking-tight">Aumix</h3>

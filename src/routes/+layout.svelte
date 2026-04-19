@@ -3,6 +3,7 @@
 	import './layout.css';
 	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from '$lib/components/ui/sonner/index.js';
+	import * as Card from '$lib/components/ui/card/index.js';
 	import favicon from '$lib/assets/favicon.svg';
 	import { audioStore } from '$lib/audio.svelte.js';
 	import { keyboardFeedbackStore } from '$lib/keyboard-feedback.svelte.js';
@@ -22,6 +23,10 @@
 
 	const arrowKeys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 	const arrowStepIntervalMs = 50;
+	const minimumViewportWidth = 768;
+	const minimumWideViewportMediaQuery = `(min-width: ${minimumViewportWidth}px)`;
+
+	let isWideViewport = $state(true);
 
 	onMount(() => {
 		const pressedArrowKeys = new Set<string>();
@@ -103,6 +108,32 @@
 			stopArrowRepeatLoop();
 		};
 
+		const viewportMedia = window.matchMedia(minimumWideViewportMediaQuery);
+
+		const syncViewportState = (): void => {
+			isWideViewport = viewportMedia.matches;
+
+			if (!isWideViewport) {
+				clearArrowState();
+			}
+		};
+
+		syncViewportState();
+
+		let unsubscribeViewportChange = (): void => {};
+
+		if (typeof viewportMedia.addEventListener === 'function') {
+			viewportMedia.addEventListener('change', syncViewportState);
+			unsubscribeViewportChange = () => {
+				viewportMedia.removeEventListener('change', syncViewportState);
+			};
+		} else {
+			viewportMedia.addListener(syncViewportState);
+			unsubscribeViewportChange = () => {
+				viewportMedia.removeListener(syncViewportState);
+			};
+		}
+
 		const togglePlayback = (trackId: string): void => {
 			const track = audioStore.tracks.find((item) => item.id === trackId);
 			if (!track) return;
@@ -115,6 +146,8 @@
 		};
 
 		const handleKeydown = (event: KeyboardEvent): void => {
+			if (!isWideViewport) return;
+
 			if (event.repeat && arrowKeys.has(event.key)) {
 				event.preventDefault();
 				event.stopPropagation();
@@ -198,6 +231,8 @@
 		};
 
 		const handleKeyup = (event: KeyboardEvent): void => {
+			if (!isWideViewport) return;
+
 			const isTrackedArrowKey = arrowKeys.has(event.key) && pressedArrowKeys.has(event.key);
 			if (isTrackedArrowKey) {
 				event.preventDefault();
@@ -286,6 +321,7 @@
 		}
 
 		return () => {
+			unsubscribeViewportChange();
 			window.removeEventListener('keydown', handleKeydown, true);
 			window.removeEventListener('keyup', handleKeyup, true);
 			window.removeEventListener('blur', handleWindowBlur);
@@ -305,4 +341,20 @@
 <ModeWatcher />
 <Toaster />
 
-{@render children()}
+{#if isWideViewport}
+	{@render children()}
+{:else}
+	<main class="flex min-h-screen items-center justify-center p-6">
+		<Card.Root class="w-full max-w-xl text-center shadow-sm">
+			<Card.Header>
+				<Card.Title class="text-2xl tracking-tight">Wide Screen Required</Card.Title>
+			</Card.Header>
+			<Card.Content>
+				<p class="text-sm leading-relaxed text-muted-foreground sm:text-base">
+					Aumix is designed for wide screens only. You cannot proceed on smaller viewports. Please
+					open this site on a desktop or widen your browser window to at least {minimumViewportWidth}px.
+				</p>
+			</Card.Content>
+		</Card.Root>
+	</main>
+{/if}
