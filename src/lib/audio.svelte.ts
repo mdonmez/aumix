@@ -325,6 +325,12 @@ class AudioStore {
 		}
 	}
 
+	rollAll(): void {
+		for (const track of this.tracks) {
+			this.seekToStart(track.id);
+		}
+	}
+
 	seekToStart(id: string): void {
 		this.seek(id, 0);
 	}

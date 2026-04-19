@@ -16,8 +16,6 @@
 	import { Slider } from '$lib/components/ui/slider/index.js';
 	import { audioStore, type TrackState } from '$lib/audio.svelte.js';
 
-	import { Badge } from '$lib/components/ui/badge/index.js';
-
 	interface Props {
 		track: TrackState;
 		index: number;
@@ -74,9 +72,6 @@
 >
 	<Card.Header>
 		<div class="flex min-w-0 items-center gap-2">
-			<Badge class="size-8 rounded-full p-0 font-mono text-sm tabular-nums" variant="outline">
-				{index + 1}
-			</Badge>
 			<Card.Title class="w-full min-w-0 flex-1">
 				<h4
 					class="block min-w-0 scroll-m-20 truncate text-xl font-semibold tracking-tight"

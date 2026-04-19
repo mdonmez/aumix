@@ -35,11 +35,22 @@
 		const applyArrowVolumeStep = (): void => {
 			const firstTrack = audioStore.tracks[0];
 			const secondTrack = audioStore.tracks[1];
+			const firstAxisActive = pressedArrowKeys.has('ArrowUp') || pressedArrowKeys.has('ArrowDown');
+			const secondAxisActive =
+				pressedArrowKeys.has('ArrowLeft') || pressedArrowKeys.has('ArrowRight');
 
 			const firstDelta =
 				(pressedArrowKeys.has('ArrowUp') ? 1 : 0) + (pressedArrowKeys.has('ArrowDown') ? -1 : 0);
 			const secondDelta =
 				(pressedArrowKeys.has('ArrowRight') ? 1 : 0) + (pressedArrowKeys.has('ArrowLeft') ? -1 : 0);
+
+			if (firstAxisActive) {
+				keyboardFeedbackStore.pressCard(0, firstTrack?.id ?? null);
+			}
+
+			if (secondAxisActive) {
+				keyboardFeedbackStore.pressCard(1, secondTrack?.id ?? null);
+			}
 
 			if (firstTrack && firstDelta !== 0) {
 				adjustVolume(firstTrack.id, firstTrack.volume + firstDelta);
@@ -187,20 +198,8 @@
 		};
 
 		const handleKeyup = (event: KeyboardEvent): void => {
-			const target = event.target;
-			if (target instanceof HTMLElement) {
-				const tagName = target.tagName;
-				if (
-					target.isContentEditable ||
-					tagName === 'INPUT' ||
-					tagName === 'TEXTAREA' ||
-					tagName === 'SELECT'
-				) {
-					return;
-				}
-			}
-
-			if (arrowKeys.has(event.key)) {
+			const isTrackedArrowKey = arrowKeys.has(event.key) && pressedArrowKeys.has(event.key);
+			if (isTrackedArrowKey) {
 				event.preventDefault();
 				event.stopPropagation();
 
@@ -222,6 +221,19 @@
 					stopArrowRepeatLoop();
 				}
 				return;
+			}
+
+			const target = event.target;
+			if (target instanceof HTMLElement) {
+				const tagName = target.tagName;
+				if (
+					target.isContentEditable ||
+					tagName === 'INPUT' ||
+					tagName === 'TEXTAREA' ||
+					tagName === 'SELECT'
+				) {
+					return;
+				}
 			}
 
 			if (event.code === 'Digit1' || event.code === 'Numpad1') {
