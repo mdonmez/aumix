@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import {
 		Sun,
 		Moon,
@@ -86,11 +87,13 @@
 		if (dragTargetTrackId === targetTrackId) dragTargetTrackId = null;
 	}
 
-	function handleDrop(event: DragEvent, targetTrackId: string): void {
+	async function handleDrop(event: DragEvent, targetTrackId: string): Promise<void> {
 		event.preventDefault();
 		const sourceTrackId = dragSourceTrackId ?? event.dataTransfer?.getData('text/plain');
 
 		if (sourceTrackId && sourceTrackId !== targetTrackId) {
+			dragTargetTrackId = null;
+			await tick();
 			swapTracks(sourceTrackId, targetTrackId);
 		}
 
