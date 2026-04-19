@@ -6,5 +6,6 @@
 - [x] sağ üste bir (i) info butonu eklenecek.
 - [x] tema değiştiricinin soluna command#dialog eklecek (1 ve 2) kontrollerini anlatmak için.
 - [x] sesin klavyeden ve işletin sisteminden direkt kontrolü engellenecek (mümkünse)
-- [ ] siteye mobil tarayıcılardan girildiğinde sitede bir uyarı çıkacak ve sitenin sadece masaüstü ve tablet tarayıcıları için optimize tasarlanacağı belirtilecek, devam edilemeyecek.
-- [ ] siteye favicon, title ve meta description eklenecek.
+- [ ] siteye mobil tarayıcılardan girildiğinde sitede bir uyarı çıkacak ve sitenin sadece masaüstü ve tablet tarayıcıları için yapıldığı belirtilecek, devam edilemeyecek.
+- [x] siteye favicon, title ve meta description eklenecek.
+- [ ] bir kart diğerinin üstüne tutulurken diğer kartın çevresi vurgulanıyor, ancak bırakıldıktan sonra kartlar yer değiştirince anca vurgulanan kart yer değiştirdikten sonra vurgusu yok oluyor ve kötü bir flashlama olutruyor, bu flashlamayı engellemek için bırakıldığında önce vurgulanan kartın vurgusu kaldırılacak, sonra kartlar yer değiştirecek.
