@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
+	import { flip } from 'svelte/animate';
+	import { cubicOut } from 'svelte/easing';
 	import {
 		Sun,
 		Moon,
@@ -28,6 +30,31 @@
 
 	let dragSourceTrackId = $state<string | null>(null);
 	let dragTargetTrackId = $state<string | null>(null);
+	let swapFeedbackTrackIds = $state<string[]>([]);
+	let swapFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function clearSwapFeedback(): void {
+		if (swapFeedbackTimer !== null) {
+			clearTimeout(swapFeedbackTimer);
+			swapFeedbackTimer = null;
+		}
+
+		swapFeedbackTrackIds = [];
+	}
+
+	function showSwapFeedback(sourceTrackId: string, targetTrackId: string, delayMs = 220): void {
+		clearSwapFeedback();
+		swapFeedbackTrackIds = [sourceTrackId, targetTrackId];
+
+		swapFeedbackTimer = setTimeout(() => {
+			swapFeedbackTrackIds = [];
+			swapFeedbackTimer = null;
+		}, delayMs);
+	}
+
+	onDestroy(() => {
+		clearSwapFeedback();
+	});
 
 	function resetDragState(): void {
 		dragSourceTrackId = null;
@@ -95,6 +122,7 @@
 			dragTargetTrackId = null;
 			await tick();
 			swapTracks(sourceTrackId, targetTrackId);
+			showSwapFeedback(sourceTrackId, targetTrackId);
 		}
 
 		resetDragState();
@@ -209,9 +237,10 @@
 	<div class="grid grid-cols-[repeat(auto-fill,minmax(370px,1fr))] gap-4 p-6">
 		{#each audioStore.tracks as track, index (track.id)}
 			<div
-				class={`track-dnd-item relative ${dragTargetTrackId === track.id ? 'track-dnd-item--drop-target' : ''}`}
+				class={`track-dnd-item relative ${dragTargetTrackId === track.id ? 'track-dnd-item--drop-target' : ''} ${swapFeedbackTrackIds.includes(track.id) ? 'track-dnd-item--swap-feedback' : ''}`}
 				role="group"
 				aria-label={`Track card ${index + 1}: ${track.name}`}
+				animate:flip={{ duration: 220, easing: cubicOut }}
 				ondragover={(event) => handleDragOver(event, track.id)}
 				ondragleave={(event) => handleDragLeave(event, track.id)}
 				ondrop={(event) => handleDrop(event, track.id)}
@@ -251,5 +280,9 @@
 
 	:global(.track-dnd-item--drop-target [data-slot='card']) {
 		box-shadow: 0 0 0 2px var(--foreground);
+	}
+
+	:global(.track-dnd-item--swap-feedback [data-slot='card']) {
+		box-shadow: 0 0 0 2px hsl(var(--primary) / 0.85);
 	}
 </style>

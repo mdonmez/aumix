@@ -27,6 +27,10 @@
 		return AUDIO_EXTENSIONS.has(file.name.slice(lastDot).toLowerCase());
 	}
 
+	function isFileDrag(event: DragEvent): boolean {
+		return Array.from(event.dataTransfer?.types ?? []).includes('Files');
+	}
+
 	function handleFiles(files: FileList | null): void {
 		if (!files) return;
 
@@ -60,17 +64,20 @@
 	}
 
 	function handleDrop(e: DragEvent): void {
+		if (!isFileDrag(e)) return;
 		e.preventDefault();
 		isDragging = false;
 		handleFiles(e.dataTransfer?.files ?? null);
 	}
 
 	function handleDragOver(e: DragEvent): void {
+		if (!isFileDrag(e)) return;
 		e.preventDefault();
 		isDragging = true;
 	}
 
 	function handleDragLeave(e: DragEvent): void {
+		if (!isFileDrag(e)) return;
 		// Only clear dragging if leaving the drop zone entirely (not entering a child)
 		if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
 			isDragging = false;
