@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import type { Component } from 'svelte';
 	import './layout.css';
-	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from '$lib/components/ui/sonner/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import favicon from '$lib/assets/favicon.svg';
@@ -9,6 +9,7 @@
 	import { keyboardFeedbackStore } from '$lib/keyboard-feedback.svelte.js';
 
 	let { children } = $props();
+	let ModeWatcherComponent = $state<Component | null>(null);
 
 	const blockedMediaKeys = new Set([
 		'MediaPlayPause',
@@ -37,6 +38,10 @@
 	let isWideViewport = $state(getInitialWideViewportState());
 
 	onMount(() => {
+		void import('mode-watcher').then(({ ModeWatcher }) => {
+			ModeWatcherComponent = ModeWatcher;
+		});
+
 		const pressedArrowKeys = new Set<string>();
 		let arrowRafId: number | null = null;
 		let arrowLastStepAt = 0;
@@ -346,7 +351,9 @@
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
-<ModeWatcher />
+{#if ModeWatcherComponent}
+	<ModeWatcherComponent />
+{/if}
 <Toaster />
 
 {#if isWideViewport}

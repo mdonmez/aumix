@@ -1,5 +1,21 @@
 import { browser } from '$app/environment';
-import { Howl } from 'howler';
+
+type HowlSoundId = number;
+
+type HowlLike = {
+	seek: {
+		(soundId?: HowlSoundId): number | unknown;
+		(position: number, soundId?: HowlSoundId): unknown;
+	};
+	mute: (muted: boolean, soundId?: HowlSoundId) => unknown;
+	volume: (volume: number, soundId?: HowlSoundId) => unknown;
+	loop: (loop: boolean, soundId?: HowlSoundId) => unknown;
+	duration: () => number;
+	play: (soundId?: HowlSoundId) => HowlSoundId | unknown;
+	pause: (soundId?: HowlSoundId) => unknown;
+	unload: () => unknown;
+	once: (event: string, callback: () => void) => unknown;
+};
 
 export interface TrackState {
 	id: string;
@@ -14,7 +30,7 @@ export interface TrackState {
 }
 
 interface HowlRecord {
-	howl: Howl;
+	howl: HowlLike;
 	url: string;
 	/** Howler sound instance ID returned by howl.play(). Null before first play or after a non-looping sound ends. */
 	soundId: number | null;
@@ -32,8 +48,26 @@ class AudioStore {
 	playingTracksCount = $derived(this.tracks.filter((t) => t.playing).length);
 
 	#masterVolumeBeforeMute = 100;
+	#howlerPromise: Promise<{ Howl: new (options: Record<string, unknown>) => HowlLike }> | null =
+		null;
 	#howls = new Map<string, HowlRecord>();
 	#rafId: number | null = null;
+
+	async #getHowlCtor(): Promise<
+		| ((new (options: Record<string, unknown>) => HowlLike) & {
+				prototype: HowlLike;
+		  })
+		| null
+	> {
+		if (!browser) return null;
+		this.#howlerPromise ??= import('howler') as Promise<{
+			Howl: new (options: Record<string, unknown>) => HowlLike;
+		}>;
+		const { Howl } = await this.#howlerPromise;
+		return Howl as (new (options: Record<string, unknown>) => HowlLike) & {
+			prototype: HowlLike;
+		};
+	}
 
 	// ─── Volume helpers ───────────────────────────────────────────────────────
 
@@ -122,8 +156,11 @@ class AudioStore {
 
 	// ─── Public API ───────────────────────────────────────────────────────────
 
-	addTrack(file: File): void {
+	async addTrack(file: File): Promise<void> {
 		if (!browser) return;
+
+		const Howl = await this.#getHowlCtor();
+		if (!Howl) return;
 
 		const url = URL.createObjectURL(file);
 		const id = crypto.randomUUID();
@@ -143,7 +180,7 @@ class AudioStore {
 		const rec: HowlRecord = {
 			// howl is assigned below – the forward-reference is safe because
 			// Howl callbacks only fire asynchronously.
-			howl: null as unknown as Howl,
+			howl: null as unknown as HowlLike,
 			url,
 			soundId: null,
 			pendingSeek: null,
