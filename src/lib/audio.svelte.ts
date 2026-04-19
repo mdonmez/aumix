@@ -385,10 +385,18 @@ class AudioStore {
 	toggleMute(id: string): void {
 		const track = this.tracks.find((t) => t.id === id);
 		if (!track) return;
+		const defaultUnmuteVolume = 25;
+		const wasButtonMuted = track.muted;
+		const wasSliderMuted = !track.muted && track.volume === 0;
 
-		if (track.muted) {
+		if (wasButtonMuted) {
 			track.muted = false;
-			track.volume = track.volumeBeforeMute > 0 ? track.volumeBeforeMute : 10;
+			track.volume = track.volumeBeforeMute > 1 ? track.volumeBeforeMute : defaultUnmuteVolume;
+			track.volumeBeforeMute = track.volume;
+		} else if (wasSliderMuted) {
+			track.muted = false;
+			track.volume = defaultUnmuteVolume;
+			track.volumeBeforeMute = track.volume;
 		} else {
 			track.volumeBeforeMute = track.volume;
 			track.muted = true;
