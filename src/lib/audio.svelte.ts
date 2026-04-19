@@ -421,9 +421,19 @@ class AudioStore {
 	}
 
 	toggleMasterMute(): void {
-		if (this.masterMuted) {
+		const defaultUnmuteVolume = 25;
+		const wasButtonMuted = this.masterMuted;
+		const wasSliderMuted = !this.masterMuted && this.masterVolume === 0;
+
+		if (wasButtonMuted) {
 			this.masterMuted = false;
-			this.masterVolume = this.#masterVolumeBeforeMute > 0 ? this.#masterVolumeBeforeMute : 10;
+			this.masterVolume =
+				this.#masterVolumeBeforeMute > 1 ? this.#masterVolumeBeforeMute : defaultUnmuteVolume;
+			this.#masterVolumeBeforeMute = this.masterVolume;
+		} else if (wasSliderMuted) {
+			this.masterMuted = false;
+			this.masterVolume = defaultUnmuteVolume;
+			this.#masterVolumeBeforeMute = this.masterVolume;
 		} else {
 			this.#masterVolumeBeforeMute = this.masterVolume;
 			this.masterMuted = true;

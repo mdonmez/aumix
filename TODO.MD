@@ -6,3 +6,5 @@
 - [x] sağ üste bir (i) info butonu eklenecek.
 - [x] tema değiştiricinin soluna command#dialog eklecek (1 ve 2) kontrollerini anlatmak için.
 - [x] sesin klavyeden ve işletin sisteminden direkt kontrolü engellenecek (mümkünse)
+- [ ] siteye mobil tarayıcılardan girildiğinde sitede bir uyarı çıkacak ve sitenin sadece masaüstü ve tablet tarayıcıları için optimize tasarlanacağı belirtilecek, devam edilemeyecek.
+- [ ] siteye favicon, title ve meta description eklenecek.
