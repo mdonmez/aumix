@@ -18,6 +18,10 @@ interface HowlRecord {
 	url: string;
 	/** Howler sound instance ID returned by howl.play(). Null before first play or after a non-looping sound ends. */
 	soundId: number | null;
+	/** Seek requested while waiting for the next confirmed onplay event. */
+	pendingSeek: number | null;
+	/** True between play() call and onplay callback for the active sound instance. */
+	awaitingPlayEvent: boolean;
 }
 
 class AudioStore {
@@ -37,6 +41,24 @@ class AudioStore {
 		return track.muted || this.masterMuted ? 0 : (track.volume / 100) * (this.masterVolume / 100);
 	}
 
+	#clampSeek(track: TrackState, seconds: number): number {
+		const max = track.duration > 0 ? track.duration : Number.POSITIVE_INFINITY;
+		return Math.max(0, Math.min(seconds, max));
+	}
+
+	#applyPendingSeek(id: string): void {
+		const track = this.tracks.find((t) => t.id === id);
+		const rec = this.#howls.get(id);
+		if (!track || !rec || rec.soundId === null) return;
+
+		if (rec.pendingSeek !== null) {
+			const clamped = this.#clampSeek(track, rec.pendingSeek);
+			rec.howl.seek(clamped, rec.soundId);
+			track.currentTime = clamped;
+			rec.pendingSeek = null;
+		}
+	}
+
 	/**
 	 * Pushes the correct volume + mute state from TrackState/masterVolume into
 	 * the underlying Howl (and its active sound instance if one exists).
@@ -47,14 +69,15 @@ class AudioStore {
 		if (!track || !rec) return;
 
 		const vol = this.#effectiveVolume(track);
-		const isMuted = vol === 0;
+		const isMuted = track.muted || this.masterMuted;
 
 		if (rec.soundId !== null) {
-			rec.howl.volume(vol, rec.soundId);
 			rec.howl.mute(isMuted, rec.soundId);
+			rec.howl.volume(vol, rec.soundId);
 		} else {
 			// No active instance yet – set the Howl-level default so the
 			// next play() inherits the right volume.
+			rec.howl.mute(isMuted);
 			rec.howl.volume(vol);
 		}
 	}
@@ -75,6 +98,7 @@ class AudioStore {
 				if (!track.playing) continue;
 				const rec = this.#howls.get(track.id);
 				if (!rec || rec.soundId === null) continue;
+				if (rec.awaitingPlayEvent) continue;
 
 				const pos = rec.howl.seek(rec.soundId);
 				// seek() returns Howl | number depending on usage;
@@ -121,7 +145,9 @@ class AudioStore {
 			// Howl callbacks only fire asynchronously.
 			howl: null as unknown as Howl,
 			url,
-			soundId: null
+			soundId: null,
+			pendingSeek: null,
+			awaitingPlayEvent: false
 		};
 
 		// Prime duration from metadata so UI can show length and allow scrubbing
@@ -154,6 +180,19 @@ class AudioStore {
 				if (track) track.duration = howl.duration();
 			},
 
+			onplay: (soundId: number) => {
+				const track = this.tracks.find((t) => t.id === id);
+				const r = this.#howls.get(id);
+				if (!track || !r) return;
+
+				r.soundId = soundId;
+				r.awaitingPlayEvent = false;
+				track.playing = true;
+				r.howl.loop(track.loop, soundId);
+				this.#applyVolume(id);
+				this.#applyPendingSeek(id);
+			},
+
 			onend: (soundId: number) => {
 				const track = this.tracks.find((t) => t.id === id);
 				const r = this.#howls.get(id);
@@ -166,6 +205,8 @@ class AudioStore {
 					track.playing = false;
 					track.currentTime = 0;
 					r.soundId = null;
+					r.pendingSeek = 0;
+					r.awaitingPlayEvent = false;
 				}
 			},
 
@@ -177,20 +218,25 @@ class AudioStore {
 				const track = this.tracks.find((t) => t.id === id);
 				const r = this.#howls.get(id);
 				console.error(`[aumix] Play error – "${state.name}":`, error);
+				const shouldRetryAfterUnlock = !!track?.playing;
 
 				// Mobile browsers block autoplay until a user gesture.
 				// Howler fires this error; we wait for its internal unlock and retry.
 				howl.once('unlock', () => {
+					if (!shouldRetryAfterUnlock) return;
+					const rr = this.#howls.get(id);
 					const t = this.tracks.find((tt) => tt.id === id);
-					if (t?.playing) {
-						const retryId = howl.play();
-						const rr = this.#howls.get(id);
-						if (rr) rr.soundId = retryId;
-					}
+					if (!rr || !t || !t.playing) return;
+
+					rr.awaitingPlayEvent = true;
+					const retryId = howl.play();
+					if (typeof retryId === 'number') rr.soundId = retryId;
 				});
 
-				if (track) track.playing = false;
-				if (r && r.soundId === soundId) r.soundId = null;
+				if (r && r.soundId === soundId) {
+					r.soundId = null;
+					r.awaitingPlayEvent = false;
+				}
 			}
 		});
 
@@ -244,24 +290,22 @@ class AudioStore {
 		const targetTime = track.currentTime;
 
 		let soundId = rec.soundId;
+		rec.pendingSeek = targetTime;
+		rec.awaitingPlayEvent = true;
 
 		if (soundId !== null) {
 			// Resume the existing (paused) sound instance.
-			rec.howl.play(soundId);
+			const resumedId = rec.howl.play(soundId);
+			if (typeof resumedId === 'number') {
+				soundId = resumedId;
+			}
 		} else {
 			// First play, or resuming after a non-looping sound ended.
 			soundId = rec.howl.play();
-			rec.soundId = soundId;
 		}
 
-		// Always sync per-instance settings after (re)starting.
-		rec.howl.volume(this.#effectiveVolume(track), soundId);
-		rec.howl.loop(track.loop, soundId);
-
-		// Apply any position that was set while the track was stopped.
-		// With html5:true the HTMLAudioElement seek is near-instant on blob URLs.
-		if (targetTime > 0) {
-			rec.howl.seek(targetTime, soundId);
+		if (typeof soundId === 'number') {
+			rec.soundId = soundId;
 		}
 
 		track.playing = true;
@@ -277,6 +321,7 @@ class AudioStore {
 			rec.howl.pause(rec.soundId);
 		}
 		track.playing = false;
+		rec.awaitingPlayEvent = false;
 	}
 
 	playAll(): void {
@@ -306,11 +351,18 @@ class AudioStore {
 		const rec = this.#howls.get(id);
 		if (!track || !rec) return;
 
-		const clamped = Math.max(0, Math.min(seconds, track.duration));
+		const clamped = this.#clampSeek(track, seconds);
 
 		if (rec.soundId !== null) {
-			// seek(position, soundId) – setter form.
-			rec.howl.seek(clamped, rec.soundId);
+			if (track.playing && rec.awaitingPlayEvent) {
+				rec.pendingSeek = clamped;
+			} else {
+				// seek(position, soundId) – setter form.
+				rec.howl.seek(clamped, rec.soundId);
+				rec.pendingSeek = null;
+			}
+		} else {
+			rec.pendingSeek = clamped;
 		}
 		// Always update state so play() can apply it if soundId was null.
 		track.currentTime = clamped;
