@@ -26,7 +26,15 @@
 	const minimumViewportWidth = 768;
 	const minimumWideViewportMediaQuery = `(min-width: ${minimumViewportWidth}px)`;
 
-	let isWideViewport = $state(true);
+	const getInitialWideViewportState = (): boolean => {
+		if (typeof window === 'undefined') {
+			return true;
+		}
+
+		return window.matchMedia(minimumWideViewportMediaQuery).matches;
+	};
+
+	let isWideViewport = $state(getInitialWideViewportState());
 
 	onMount(() => {
 		const pressedArrowKeys = new Set<string>();
@@ -342,19 +350,21 @@
 <Toaster />
 
 {#if isWideViewport}
-	{@render children()}
-{:else}
-	<main class="flex min-h-screen items-center justify-center p-6">
-		<Card.Root class="w-full max-w-xl text-center shadow-sm">
-			<Card.Header>
-				<Card.Title class="text-2xl tracking-tight">Wide Screen Required</Card.Title>
-			</Card.Header>
-			<Card.Content>
-				<p class="text-sm leading-relaxed text-muted-foreground sm:text-base">
-					Aumix is designed for wide screens only. You cannot proceed on smaller viewports. Please
-					open this site on a desktop or widen your browser window to at least {minimumViewportWidth}px.
-				</p>
-			</Card.Content>
-		</Card.Root>
-	</main>
+	<div class="hidden md:block">
+		{@render children()}
+	</div>
 {/if}
+
+<main class="flex min-h-screen items-center justify-center p-6 md:hidden">
+	<Card.Root class="w-full max-w-xl text-center shadow-sm">
+		<Card.Header>
+			<Card.Title class="text-2xl tracking-tight">Wide Screen Required</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<p class="text-sm leading-relaxed text-muted-foreground sm:text-base">
+				Aumix is designed for wide screens only. You cannot proceed on smaller viewports. Please
+				open this site on a desktop or widen your browser window to at least {minimumViewportWidth}px.
+			</p>
+		</Card.Content>
+	</Card.Root>
+</main>

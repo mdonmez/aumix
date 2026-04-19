@@ -26,12 +26,12 @@ interface HowlRecord {
 
 class AudioStore {
 	tracks = $state<TrackState[]>([]);
-	masterVolume = $state(75);
+	masterVolume = $state(100);
 	masterMuted = $state(false);
 	masterPlaying = $derived(this.tracks.some((t) => t.playing));
 	playingTracksCount = $derived(this.tracks.filter((t) => t.playing).length);
 
-	#masterVolumeBeforeMute = 75;
+	#masterVolumeBeforeMute = 100;
 	#howls = new Map<string, HowlRecord>();
 	#rafId: number | null = null;
 
@@ -132,9 +132,9 @@ class AudioStore {
 			id,
 			name: file.name.replace(/\.[^/.]+$/, ''),
 			playing: false,
-			volume: 75,
+			volume: 100,
 			muted: false,
-			volumeBeforeMute: 75,
+			volumeBeforeMute: 100,
 			loop: false,
 			currentTime: 0,
 			duration: 0
