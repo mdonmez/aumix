@@ -49,9 +49,6 @@
 		"wrangler": "^4.81.0"
 	},
 	"dependencies": {
-		"@dnd-kit-svelte/core": "^0.0.11",
-		"@dnd-kit-svelte/svelte": "^0.1.6",
-		"@thisux/sveltednd": "^0.4.0",
 		"howler": "^2.2.4",
 		"mode-watcher": "^1.1.0"
 	}

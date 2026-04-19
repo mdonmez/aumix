@@ -268,17 +268,6 @@ class AudioStore {
 		}
 	}
 
-	reorderTracks(nextTracks: TrackState[]): void {
-		if (nextTracks.length !== this.tracks.length) return;
-
-		const currentIds = new Set(this.tracks.map((track) => track.id));
-		const nextIds = new Set(nextTracks.map((track) => track.id));
-		if (nextIds.size !== this.tracks.length) return;
-		if (nextTracks.some((track) => !currentIds.has(track.id))) return;
-
-		this.tracks.splice(0, this.tracks.length, ...nextTracks);
-	}
-
 	play(id: string): void {
 		const track = this.tracks.find((t) => t.id === id);
 		const rec = this.#howls.get(id);

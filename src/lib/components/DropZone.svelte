@@ -53,6 +53,12 @@
 		}
 	}
 
+	function handleFileInput(e: Event): void {
+		handleFiles((e.target as HTMLInputElement).files);
+		// Reset input so the same file can be re-added if removed
+		(e.target as HTMLInputElement).value = '';
+	}
+
 	function handleDrop(e: DragEvent): void {
 		e.preventDefault();
 		isDragging = false;
@@ -70,16 +76,10 @@
 			isDragging = false;
 		}
 	}
-
-	function handleFileInput(e: Event): void {
-		handleFiles((e.target as HTMLInputElement).files);
-		// Reset input so the same file can be re-added if removed
-		(e.target as HTMLInputElement).value = '';
-	}
 </script>
 
 <div
-	class="flex w-full items-center justify-center"
+	class="flex h-full w-full items-stretch justify-stretch"
 	role="region"
 	aria-label="Audio drop zone"
 	ondrop={handleDrop}
@@ -96,7 +96,7 @@
 	/>
 	<Empty.Root
 		class={[
-			'w-full border border-dashed p-6 transition-colors duration-150',
+			'h-full w-full border border-dashed p-4 transition-colors duration-150',
 			isDragging ? 'border-primary bg-primary/5' : ''
 		].join(' ')}
 	>
@@ -106,7 +106,7 @@
 			</Empty.Media>
 			<Empty.Title>{isDragging ? 'Drop to add' : 'Add new audio'}</Empty.Title>
 			<Empty.Description>
-				Drag and drop the audio file(s) or click the button below to select them.
+				Drag and drop audio file(s) here, or use the button below.
 			</Empty.Description>
 		</Empty.Header>
 		<Empty.Content>
