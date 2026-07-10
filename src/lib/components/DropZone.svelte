@@ -1,61 +1,12 @@
 <script lang="ts">
 	import { FileMusic } from '@lucide/svelte';
-	import { toast } from 'svelte-sonner';
 
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Empty from '$lib/components/ui/empty/index.js';
-	import { audioStore } from '$lib/audio.svelte.js';
+	import { isFileDrag, handleFiles } from '$lib/file-utils.js';
 
 	let isDragging = $state(false);
 	let fileInput: HTMLInputElement | null = $state(null);
-
-	const AUDIO_EXTENSIONS = new Set([
-		'.mp3',
-		'.m4a',
-		'.aac',
-		'.wav',
-		'.ogg',
-		'.flac',
-		'.oga',
-		'.webm'
-	]);
-
-	function isAudioFile(file: File): boolean {
-		if (file.type.startsWith('audio/')) return true;
-		const lastDot = file.name.lastIndexOf('.');
-		if (lastDot === -1) return false;
-		return AUDIO_EXTENSIONS.has(file.name.slice(lastDot).toLowerCase());
-	}
-
-	function isFileDrag(event: DragEvent): boolean {
-		return Array.from(event.dataTransfer?.types ?? []).includes('Files');
-	}
-
-	function handleFiles(files: FileList | null): void {
-		if (!files) return;
-
-		const rejectedFiles: string[] = [];
-		for (const file of files) {
-			if (isAudioFile(file)) {
-				audioStore.addTrack(file);
-			} else {
-				rejectedFiles.push(file.name);
-			}
-		}
-
-		if (rejectedFiles.length > 0) {
-			toast('The following files could not be identified as audio files:', {
-				position: 'top-center',
-				style: 'color: #ef4444;',
-				descriptionClass: 'whitespace-pre-line',
-				description: rejectedFiles.map((fileName) => `• ${fileName}`).join('\n'),
-				action: {
-					label: 'OK',
-					onClick: () => console.info('OK')
-				}
-			});
-		}
-	}
 
 	function handleFileInput(e: Event): void {
 		handleFiles((e.target as HTMLInputElement).files);
@@ -113,7 +64,7 @@
 			</Empty.Media>
 			<Empty.Title>{isDragging ? 'Drop to add' : 'Add new audio'}</Empty.Title>
 			<Empty.Description>
-				Drag and drop audio file(s) here, or use the button below.
+				Drop audio file(s), or use the button below.
 			</Empty.Description>
 		</Empty.Header>
 		<Empty.Content>

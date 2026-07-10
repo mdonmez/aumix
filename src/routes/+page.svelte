@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { onDestroy, tick } from 'svelte';
+	import { browser } from '$app/environment';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { cubicOut } from 'svelte/easing';
 	import {
@@ -13,9 +14,12 @@
 		SkipBack,
 		CircleQuestionMark,
 		Trash2,
-		GripVertical
+		GripVertical,
+		FileMusic
 	} from '@lucide/svelte';
 
+	import { toast } from 'svelte-sonner';
+	import { isFileDrag, handleFiles } from '$lib/file-utils.js';
 	import { toggleMode } from 'mode-watcher';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as ButtonGroup from '$lib/components/ui/button-group/index.js';
@@ -35,6 +39,7 @@
 	let autoScrollFrameId: number | null = null;
 	let autoScrollVelocity = 0;
 	let hasDragAutoScrollListeners = false;
+	let showGlobalDropOverlay = $state(false);
 
 	const AUTO_SCROLL_EDGE_PX = 130;
 	const AUTO_SCROLL_MAX_SPEED_PX = 22;
@@ -141,10 +146,17 @@
 		}, delayMs);
 	}
 
+	onMount(() => {
+		if (!browser) return;
+		window.addEventListener('dragenter', handleWindowDragEnter);
+	});
+
 	onDestroy(() => {
 		clearSwapFeedback();
 		stopAutoScrollLoop();
 		removeDragAutoScrollListeners();
+		if (!browser) return;
+		window.removeEventListener('dragenter', handleWindowDragEnter);
 	});
 
 	function resetDragState(): void {
@@ -152,6 +164,28 @@
 		dragTargetTrackId = null;
 		stopAutoScrollLoop();
 		removeDragAutoScrollListeners();
+	}
+
+	// Global file-drop overlay handlers
+	function handleWindowDragEnter(e: DragEvent): void {
+		if (!isFileDrag(e)) return;
+		showGlobalDropOverlay = true;
+	}
+
+	function handleOverlayDragOver(e: DragEvent): void {
+		e.preventDefault();
+	}
+
+	function handleOverlayDrop(e: DragEvent): void {
+		e.preventDefault();
+		showGlobalDropOverlay = false;
+		handleFiles(e.dataTransfer?.files ?? null);
+	}
+
+	function handleOverlayDragLeave(e: DragEvent): void {
+		if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
+			showGlobalDropOverlay = false;
+		}
 	}
 
 	function swapTracks(sourceTrackId: string, targetTrackId: string): void {
@@ -367,6 +401,22 @@
 		<DropZone />
 	</div>
 </div>
+
+{#if showGlobalDropOverlay}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		role="region"
+		aria-label="Global drop overlay"
+		class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/60 backdrop-blur-sm"
+		ondragover={handleOverlayDragOver}
+		ondrop={handleOverlayDrop}
+		ondragleave={handleOverlayDragLeave}
+	>
+		<FileMusic class="h-16 w-16 text-white" />
+		<span class="text-4xl font-bold text-white">Drop anywhere</span>
+		<span class="text-lg text-white/70">Release to add audio files</span>
+	</div>
+{/if}
 
 <style>
 	:global(.track-dnd-item [data-slot='card-header'] > div:first-child) {
